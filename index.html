@@ -33,7 +33,11 @@
                 </div>
             </div>
             <div id="auth-controls">
-                <!-- Rendered dynamically via JS -->
+                <!-- Fallback before JS loads -->
+                <button class="flex items-center space-x-2 bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium opacity-75 cursor-wait">
+                    <i class="ph-fill ph-arrows-clockwise text-gray-300 text-lg animate-spin"></i>
+                    <span>Connecting...</span>
+                </button>
             </div>
         </div>
     </header>
@@ -108,6 +112,29 @@
             <!-- Tasks injected here via JS -->
         </div>
     </main>
+
+    <!-- Failsafe for Network/Local execution issues -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var spinner = document.getElementById('loadingSpinner');
+                var emptyState = document.getElementById('emptyState');
+                var authControls = document.getElementById('auth-controls');
+                
+                // If the spinner is still visible after 10 seconds, force show the error
+                if (spinner && !spinner.classList.contains('hidden')) {
+                    spinner.classList.add('hidden');
+                    
+                    if(authControls) {
+                        authControls.innerHTML = '<button class="flex items-center space-x-2 bg-red-800 px-3 py-2 rounded-lg text-sm font-medium opacity-75 cursor-not-allowed"><i class="ph-fill ph-warning text-red-300 text-lg"></i><span>Error</span></button>';
+                    }
+
+                    emptyState.classList.remove('hidden');
+                    emptyState.innerHTML = '<i class="ph ph-warning-circle text-6xl text-red-500 mx-auto mb-4 block"></i><h3 class="text-lg font-medium text-gray-900">Connection Error</h3><div class="text-gray-600 mt-3 px-4 text-sm max-w-md mx-auto text-left space-y-2"><p>The app could not connect to the database.</p><p><b>Common Fixes:</b></p><ul class="list-disc pl-5 space-y-1"><li>If you double-clicked the HTML file locally (<b>file://</b>), it won\'t work. You must upload it to a web host.</li><li>Check if an ad-blocker or strict firewall is blocking the connection.</li><li>Go to Firebase Console &rarr; Firestore Database and click the <b>Create Database</b> button.</li></ul></div>';
+                }
+            }, 10000); // 10 seconds timeout
+        });
+    </script>
 
     <!-- --- Modals --- -->
 
