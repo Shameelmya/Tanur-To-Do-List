@@ -258,6 +258,10 @@
         const deleteConfirmModal = document.getElementById('deleteConfirmModal');
         
         // --- Initialization ---
+        
+        // Render header immediately so Admin button is always accessible
+        renderHeader();
+
         async function init() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -266,7 +270,14 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.warn("Auth failed:", error);
+                console.error("Auth failed:", error);
+                loadingSpinner.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.innerHTML = `
+                    <i class="ph ph-warning-circle text-6xl text-red-400 mx-auto mb-4 block"></i>
+                    <h3 class="text-lg font-medium text-gray-900">Authentication Failed</h3>
+                    <p class="text-gray-500 mt-1 px-4">Please go to your Firebase Console -> Authentication -> Sign-in method, and enable <b>Anonymous</b>.</p>
+                `;
             }
         }
 
@@ -276,10 +287,24 @@
                 onSnapshot(tasksRef, (snapshot) => {
                     todos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     loadingSpinner.classList.add('hidden');
+                    
+                    // Reset empty state HTML in case it previously showed an error
+                    emptyState.innerHTML = `
+                        <i class="ph ph-check-circle text-6xl text-gray-300 mx-auto mb-4 block"></i>
+                        <h3 class="text-lg font-medium text-gray-900">No tasks found</h3>
+                        <p class="text-gray-500 mt-1">Try adjusting your search or add a new task.</p>
+                    `;
+                    
                     renderUI();
                 }, (error) => {
                     console.error("Fetch error:", error);
                     loadingSpinner.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    emptyState.innerHTML = `
+                        <i class="ph ph-shield-warning text-6xl text-red-400 mx-auto mb-4 block"></i>
+                        <h3 class="text-lg font-medium text-gray-900">Database Access Denied</h3>
+                        <p class="text-gray-500 mt-1 px-4 text-sm max-w-md mx-auto">Please go to Firebase Console -> Firestore Database -> Rules, and set them to <b>allow read, write: if true;</b> for testing.</p>
+                    `;
                 });
             }
         });
