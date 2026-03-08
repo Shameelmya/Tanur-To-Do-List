@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanur Election Urgent To-Do</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Similar to Lucide) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        /* Smooth fade in animation */
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white sticky top-0 z-10 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="ph-fill ph-shield-warning text-3xl text-orange-400"></i>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-tight">Tanur Election</h1>
+                    <p class="text-xs md:text-sm text-indigo-200 font-medium tracking-wide uppercase">Urgent To-Do List</p>
+                </div>
+            </div>
+            <div id="auth-controls">
+                <!-- Rendered dynamically via JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <!-- Toolbar -->
+        <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col lg:flex-row gap-3 justify-between items-start lg:items-center">
+            
+            <!-- Search -->
+            <div class="relative w-full lg:w-auto flex-1">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400"></i>
+                <input type="text" id="searchInput" placeholder="Search assigned person or task..." 
+                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+
+            <!-- Filters & Minimal Add Button -->
+            <div class="flex flex-wrap md:flex-nowrap items-center gap-2 w-full lg:w-auto">
+                
+                <!-- Status Filter -->
+                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2">
+                    <i class="ph ph-flag text-gray-400 mr-1 hidden sm:block"></i>
+                    <select id="filterStatus" class="bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <!-- Sort Dropdown -->
+                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2">
+                    <i class="ph ph-funnel text-gray-400 mr-1 hidden sm:block"></i>
+                    <select id="sortSelect" class="bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer">
+                        <option value="priority">Sort: Priority</option>
+                        <option value="time">Sort: Added Time</option>
+                        <option value="alphabetical">Sort: Name (A-Z)</option>
+                        <option value="deadline">Sort: Deadline</option>
+                    </select>
+                </div>
+
+                <!-- Deadline Filter -->
+                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2">
+                    <i class="ph ph-calendar text-gray-400 mr-1"></i>
+                    <input type="date" id="filterDeadline" class="bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer">
+                    <button id="clearDeadlineBtn" class="text-red-500 hover:text-red-700 ml-1 hidden">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+
+                <!-- Admin Add Button (Minimal & Round) -->
+                <button id="openAddModalBtn" title="Add Task" class="hidden items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-full shadow-md transition-colors shrink-0">
+                    <i class="ph ph-plus font-bold text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Task Grid Container -->
+        <div id="loadingSpinner" class="flex justify-center py-20">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+        
+        <div id="emptyState" class="hidden text-center py-20 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <i class="ph ph-check-circle text-6xl text-gray-300 mx-auto mb-4 block"></i>
+            <h3 class="text-lg font-medium text-gray-900">No tasks found</h3>
+            <p class="text-gray-500 mt-1">Try adjusting your search or add a new task.</p>
+        </div>
+
+        <div id="tasks-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 hidden">
+            <!-- Tasks injected here via JS -->
+        </div>
+    </main>
+
+    <!-- --- Modals --- -->
+
+    <!-- Admin Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="ph ph-lock-key text-indigo-600 text-2xl"></i> Admin Access
+                </h2>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Passcode</label>
+                    <input type="password" id="adminPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Enter admin passcode">
+                    <p id="loginError" class="text-red-500 text-sm mt-1 hidden">Incorrect Password</p>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition-colors">Unlock</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Task Modal -->
+    <div id="taskModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8 fade-in">
+            <div class="flex justify-between items-center mb-6 border-b pb-3">
+                <h2 id="taskModalTitle" class="text-xl font-bold text-gray-900">Add New Requirement</h2>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            
+            <form id="taskForm" class="space-y-4">
+                <input type="hidden" id="taskId">
+                <input type="hidden" id="taskCreatedAt">
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Requirement (Task Title) *</label>
+                    <input type="text" id="taskReq" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="E.g., Arrange voting booths">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Required By *</label>
+                        <input type="text" id="taskReqBy" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="E.g., Election Commission">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Assigned To *</label>
+                        <input type="text" id="taskAssigned" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Person's Name">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Priority Level</label>
+                        <select id="taskPriority" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High (Urgent)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Deadline (Optional)</label>
+                        <input type="date" id="taskDeadline" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                    <textarea id="taskDesc" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Detailed instructions..."></textarea>
+                </div>
+
+                <div id="statusContainer" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                    <select id="taskStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                        <option value="Pending">Pending</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3 border-t mt-6">
+                    <button type="button" class="close-modal-btn px-5 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors">Cancel</button>
+                    <button type="submit" id="taskSubmitBtn" class="px-5 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium transition-colors shadow-sm">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Delete Confirmation Modal (Avoids Iframe Blocking) -->
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center fade-in">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="ph ph-warning-circle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Delete Task?</h3>
+            <p class="text-sm text-gray-500 mb-6">Are you sure you want to permanently delete this task? This action cannot be undone.</p>
+            <div class="flex justify-center space-x-3">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200">Cancel</button>
+                <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700">Delete Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JavaScript Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyCck3sKKqQvxZsNkg3WHMNRZbEpplDlXQ4",
+            authDomain: "tanur-to-do-list.firebaseapp.com",
+            projectId: "tanur-to-do-list",
+            storageBucket: "tanur-to-do-list.firebasestorage.app",
+            messagingSenderId: "201926247776",
+            appId: "1:201926247776:web:6de0582205d4ff452f8a05"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'tanur-election-app';
+
+        // --- State Variables ---
+        let todos = [];
+        let isAdmin = false;
+        let taskToDelete = null; // Holds ID for delete modal
+
+        // --- DOM Elements ---
+        const authControls = document.getElementById('auth-controls');
+        const tasksContainer = document.getElementById('tasks-container');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const emptyState = document.getElementById('emptyState');
+        const openAddModalBtn = document.getElementById('openAddModalBtn');
+        
+        // Inputs & Filters
+        const searchInput = document.getElementById('searchInput');
+        const sortSelect = document.getElementById('sortSelect');
+        const filterDeadline = document.getElementById('filterDeadline');
+        const clearDeadlineBtn = document.getElementById('clearDeadlineBtn');
+        const filterStatus = document.getElementById('filterStatus');
+        
+        // Modals
+        const loginModal = document.getElementById('loginModal');
+        const taskModal = document.getElementById('taskModal');
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        
+        // --- Initialization ---
+        async function init() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.warn("Auth failed:", error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const tasksRef = collection(db, 'artifacts', appIdStr, 'public', 'data', 'tasks');
+                onSnapshot(tasksRef, (snapshot) => {
+                    todos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    loadingSpinner.classList.add('hidden');
+                    renderUI();
+                }, (error) => {
+                    console.error("Fetch error:", error);
+                    loadingSpinner.classList.add('hidden');
+                });
+            }
+        });
+
+        init();
+
+        // --- UI Rendering ---
+        function renderUI() {
+            renderHeader();
+            renderTasks();
+            
+            // Toggle Admin Button
+            if (isAdmin) {
+                openAddModalBtn.classList.remove('hidden');
+                openAddModalBtn.classList.add('flex');
+            } else {
+                openAddModalBtn.classList.add('hidden');
+                openAddModalBtn.classList.remove('flex');
+            }
+        }
+
+        function renderHeader() {
+            if (isAdmin) {
+                authControls.innerHTML = `
+                    <button id="logoutBtn" class="flex items-center space-x-2 bg-indigo-800 hover:bg-indigo-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph-fill ph-lock-open text-green-400 text-lg"></i>
+                        <span class="hidden md:inline">Admin Active (Logout)</span>
+                    </button>
+                `;
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    isAdmin = false;
+                    renderUI();
+                });
+            } else {
+                authControls.innerHTML = `
+                    <button id="loginBtn" class="flex items-center space-x-2 bg-indigo-800 hover:bg-indigo-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="ph-fill ph-lock-key text-gray-300 text-lg"></i>
+                        <span>Admin Login</span>
+                    </button>
+                `;
+                document.getElementById('loginBtn').addEventListener('click', () => {
+                    document.getElementById('adminPassword').value = '';
+                    document.getElementById('loginError').classList.add('hidden');
+                    loginModal.classList.remove('hidden');
+                });
+            }
+        }
+
+        function renderTasks() {
+            // Apply Filters
+            let filtered = todos.filter(t => {
+                const term = searchInput.value.toLowerCase().trim();
+                const assignedToMatch = (t.assignedTo || '').toLowerCase().includes(term);
+                const reqMatch = (t.requirement || '').toLowerCase().includes(term);
+                
+                const matchesSearch = assignedToMatch || reqMatch;
+                const matchesDeadline = filterDeadline.value ? t.deadline === filterDeadline.value : true;
+                const matchesStatus = filterStatus.value ? t.status === filterStatus.value : true;
+                return matchesSearch && matchesDeadline && matchesStatus;
+            });
+
+            // Apply Sort
+            const priorityWeights = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            filtered.sort((a, b) => {
+                const val = sortSelect.value;
+                if (val === 'priority') {
+                    const pA = priorityWeights[a.priority] || 0;
+                    const pB = priorityWeights[b.priority] || 0;
+                    if (pA !== pB) return pB - pA;
+                    return b.createdAt - a.createdAt;
+                } else if (val === 'time') {
+                    return b.createdAt - a.createdAt;
+                } else if (val === 'alphabetical') {
+                    return a.assignedTo.localeCompare(b.assignedTo);
+                } else if (val === 'deadline') {
+                    if (!a.deadline) return 1;
+                    if (!b.deadline) return -1;
+                    return new Date(a.deadline) - new Date(b.deadline);
+                }
+                return 0;
+            });
+
+            // Update Visibility
+            if (filtered.length === 0) {
+                tasksContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                tasksContainer.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                
+                // Build HTML
+                tasksContainer.innerHTML = filtered.map(task => {
+                    const daysLeftHTML = getDaysLeftHTML(task.deadline);
+                    const statusColors = {
+                        'Pending': 'bg-gray-100 text-gray-800 border-gray-200',
+                        'Processing': 'bg-blue-100 text-blue-800 border-blue-200',
+                        'Completed': 'bg-green-100 text-green-800 border-green-200',
+                        'Cancelled': 'bg-red-100 text-red-800 border-red-200',
+                    };
+                    const badgeColors = {
+                        'High': 'bg-red-100 text-red-700',
+                        'Medium': 'bg-orange-100 text-orange-700',
+                        'Low': 'bg-green-100 text-green-700'
+                    };
+                    const barColors = { 'High': 'bg-red-500', 'Medium': 'bg-orange-400', 'Low': 'bg-green-500' };
+
+                    let adminControlsHTML = '';
+                    let statusHTML = '';
+
+                    if (isAdmin) {
+                        adminControlsHTML = `
+                            <div class="flex space-x-2">
+                                <button class="edit-btn text-gray-400 hover:text-indigo-600 transition-colors" data-id="${task.id}">
+                                    <i class="ph ph-pencil-simple text-lg pointer-events-none"></i>
+                                </button>
+                                <button class="delete-btn text-gray-400 hover:text-red-600 transition-colors" data-id="${task.id}">
+                                    <i class="ph ph-trash text-lg pointer-events-none"></i>
+                                </button>
+                            </div>
+                        `;
+                        statusHTML = `
+                            <select class="status-select text-sm font-semibold rounded-lg px-2 py-1 outline-none cursor-pointer border ${statusColors[task.status]}" data-id="${task.id}">
+                                <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Processing" ${task.status === 'Processing' ? 'selected' : ''}>Processing</option>
+                                <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                <option value="Cancelled" ${task.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                        `;
+                    } else {
+                        statusHTML = `<span class="text-sm font-semibold rounded-lg px-3 py-1 border ${statusColors[task.status]}">${task.status}</span>`;
+                    }
+
+                    return `
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden">
+                            <div class="h-1.5 w-full ${barColors[task.priority]}"></div>
+                            <div class="p-5 flex-1 flex flex-col">
+                                <div class="flex justify-between items-start mb-3">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${badgeColors[task.priority]}">
+                                        ${task.priority}
+                                    </span>
+                                    ${adminControlsHTML}
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-900 mb-1 leading-tight">${escapeHTML(task.requirement)}</h3>
+                                <div class="text-sm text-gray-600 mb-4 space-y-1 mt-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                    <p><span class="font-semibold text-gray-700">Required By:</span> ${escapeHTML(task.requiredBy)}</p>
+                                    <p><span class="font-semibold text-gray-700">Assigned To:</span> <span class="text-indigo-700 font-medium">${escapeHTML(task.assignedTo)}</span></p>
+                                </div>
+                                <p class="text-gray-700 text-sm flex-1 whitespace-pre-wrap mb-4">${escapeHTML(task.description)}</p>
+                                <div class="mt-auto border-t border-gray-100 pt-4 flex flex-col space-y-3">
+                                    ${task.deadline ? `
+                                        <div class="flex items-center text-xs font-medium">
+                                            <i class="ph ph-clock mr-1.5 text-gray-400 text-sm"></i>
+                                            <span class="text-gray-500 mr-2">Due: ${task.deadline}</span>
+                                            ${daysLeftHTML}
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex items-center justify-between mt-2">
+                                        <span class="text-xs font-semibold text-gray-500 uppercase">Status:</span>
+                                        ${statusHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // --- Helpers ---
+        function getDaysLeftHTML(deadlineStr) {
+            if (!deadlineStr) return '';
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const deadlineDate = new Date(deadlineStr); deadlineDate.setHours(0, 0, 0, 0);
+            const diffTime = deadlineDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let text, color;
+            if (diffDays < 0) { text = `${Math.abs(diffDays)} days overdue`; color = 'text-red-600 bg-red-100'; }
+            else if (diffDays === 0) { text = 'Due Today'; color = 'text-orange-600 bg-orange-100'; }
+            else if (diffDays <= 2) { text = `${diffDays} days left`; color = 'text-orange-600 bg-orange-100'; }
+            else { text = `${diffDays} days left`; color = 'text-blue-600 bg-blue-100'; }
+            
+            return `<span class="px-2 py-0.5 rounded-md ${color}">${text}</span>`;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        // --- Event Listeners ---
+        
+        // Filters & Search
+        searchInput.addEventListener('input', renderTasks);
+        sortSelect.addEventListener('change', renderTasks);
+        filterStatus.addEventListener('change', renderTasks);
+        filterDeadline.addEventListener('change', (e) => {
+            clearDeadlineBtn.classList.toggle('hidden', !e.target.value);
+            renderTasks();
+        });
+        clearDeadlineBtn.addEventListener('click', () => {
+            filterDeadline.value = '';
+            clearDeadlineBtn.classList.add('hidden');
+            renderTasks();
+        });
+
+        // Modals generic close
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loginModal.classList.add('hidden');
+                taskModal.classList.add('hidden');
+            });
+        });
+
+        // Admin Login Form
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (document.getElementById('adminPassword').value === '12102000') {
+                isAdmin = true;
+                loginModal.classList.add('hidden');
+                renderUI();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        // Task Form Setup & Submit
+        openAddModalBtn.addEventListener('click', () => {
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskCreatedAt').value = '';
+            document.getElementById('taskStatus').value = 'Pending';
+            document.getElementById('taskModalTitle').innerText = 'Add New Requirement';
+            document.getElementById('taskSubmitBtn').innerText = 'Add Task';
+            document.getElementById('statusContainer').classList.add('hidden');
+            taskModal.classList.remove('hidden');
+        });
+
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAdmin) return;
+
+            const id = document.getElementById('taskId').value;
+            const taskData = {
+                requirement: document.getElementById('taskReq').value,
+                requiredBy: document.getElementById('taskReqBy').value,
+                assignedTo: document.getElementById('taskAssigned').value,
+                priority: document.getElementById('taskPriority').value,
+                deadline: document.getElementById('taskDeadline').value,
+                description: document.getElementById('taskDesc').value,
+                status: document.getElementById('taskStatus').value,
+                updatedAt: Date.now()
+            };
+
+            // Close modal IMMEDIATELY for snappy feeling
+            taskModal.classList.add('hidden');
+
+            try {
+                const tasksRef = collection(db, 'artifacts', appIdStr, 'public', 'data', 'tasks');
+                if (id) {
+                    taskData.createdAt = Number(document.getElementById('taskCreatedAt').value);
+                    await updateDoc(doc(tasksRef, id), taskData);
+                } else {
+                    taskData.createdAt = Date.now();
+                    taskData.status = 'Pending'; // Force pending on new
+                    await addDoc(tasksRef, taskData);
+                }
+            } catch (err) {
+                console.error('Save failed', err);
+                taskModal.classList.remove('hidden'); // Reopen if fail
+            }
+        });
+
+        // Event Delegation for Task Cards (Edit, Delete, Status Change)
+        tasksContainer.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+
+            if (editBtn && isAdmin) {
+                const task = todos.find(t => t.id === editBtn.dataset.id);
+                if (task) {
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskCreatedAt').value = task.createdAt;
+                    document.getElementById('taskReq').value = task.requirement || '';
+                    document.getElementById('taskReqBy').value = task.requiredBy || '';
+                    document.getElementById('taskAssigned').value = task.assignedTo || '';
+                    document.getElementById('taskPriority').value = task.priority || 'Medium';
+                    document.getElementById('taskDeadline').value = task.deadline || '';
+                    document.getElementById('taskDesc').value = task.description || '';
+                    document.getElementById('taskStatus').value = task.status || 'Pending';
+                    
+                    document.getElementById('taskModalTitle').innerText = 'Edit Requirement';
+                    document.getElementById('taskSubmitBtn').innerText = 'Update Task';
+                    document.getElementById('statusContainer').classList.remove('hidden');
+                    taskModal.classList.remove('hidden');
+                }
+            }
+
+            if (deleteBtn && isAdmin) {
+                taskToDelete = deleteBtn.dataset.id;
+                deleteConfirmModal.classList.remove('hidden');
+            }
+        });
+
+        tasksContainer.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('status-select') && isAdmin) {
+                const id = e.target.dataset.id;
+                const newStatus = e.target.value;
+                try {
+                    await updateDoc(doc(db, 'artifacts', appIdStr, 'public', 'data', 'tasks', id), { 
+                        status: newStatus, 
+                        updatedAt: Date.now() 
+                    });
+                } catch (err) {
+                    console.error("Status update error", err);
+                }
+            }
+        });
+
+        // Delete Confirmation Logic
+        window.closeDeleteModal = function() {
+            deleteConfirmModal.classList.add('hidden');
+            taskToDelete = null;
+        }
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (!isAdmin || !taskToDelete) return;
+            const idToDel = taskToDelete;
+            
+            // Close instantly
+            closeDeleteModal();
+            
+            try {
+                await deleteDoc(doc(db, 'artifacts', appIdStr, 'public', 'data', 'tasks', idToDel));
+            } catch (error) {
+                console.error("Delete error:", error);
+            }
+        });
+
+    </script>
+</body>
+</html>
